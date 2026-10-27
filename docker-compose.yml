@@ -1,0 +1,51 @@
+﻿services:
+  postgresdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: exam_2400030256
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d exam_2400030256"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend/CrudService
+      dockerfile: Dockerfile
+    image: vishalsurya20/docker-backend-2400030256:latest
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresdb:5432/exam_2400030256
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin123
+      EUREKA_CLIENT_ENABLED: "false"
+      SERVER_PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+    image: vishalsurya20/docker-frontend-2400030256:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
